@@ -8,7 +8,7 @@
 .header {
   background: #123b63;
   color: white;
-  padding: 2rem;
+  padding: 2.5rem 2rem;
   text-align: center;
 }
 
@@ -18,7 +18,7 @@
 }
 
 .header p {
-  margin-top: 0.5rem;
+  margin: 0.5rem 0 0;
   font-size: 1.1rem;
 }
 
@@ -37,10 +37,52 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+.welcome-card h2,
+.features h2 {
+  color: #123b63;
+  margin-top: 0;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 1.5rem auto 0;
+  max-width: 650px;
+}
+
+.auth-form label {
+  font-weight: 600;
+}
+
+.auth-form input,
+.auth-form select,
+.auth-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  background: white;
+  color: #1f2937;
+}
+
+.auth-form textarea {
+  resize: vertical;
+}
+
+.auth-form input[type="checkbox"] {
+  width: auto;
+  margin-right: 0.5rem;
+}
+
 .button-group {
   display: flex;
   gap: 1rem;
   margin-top: 1.5rem;
+  flex-wrap: wrap;
 }
 
 button {
@@ -57,6 +99,67 @@ button:hover {
   background: #0d2d4c;
 }
 
+.course-list {
+  margin-top: 2rem;
+}
+
+.course-item {
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.course-item p {
+  margin: 0.4rem 0;
+}
+
+.course-item select {
+  padding: 0.6rem;
+  margin: 0.5rem 0.75rem 0.5rem 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: white;
+}
+
+.compatibility-result,
+.conflict-result,
+.override-result {
+  margin-top: 1.25rem;
+  padding: 1rem 1.25rem;
+  background: #f8fafc;
+  border-left: 4px solid #123b63;
+  border-radius: 6px;
+}
+
+.compatibility-result h3,
+.conflict-result h3,
+.override-result h3 {
+  margin-top: 0;
+  color: #123b63;
+}
+
 .features ul {
   line-height: 1.8;
+}
+
+small {
+  color: #64748b;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 1rem;
+  }
+
+  .welcome-card,
+  .features {
+    padding: 1.25rem;
+  }
+
+  .header h1 {
+    font-size: 2rem;
+  }
 }
