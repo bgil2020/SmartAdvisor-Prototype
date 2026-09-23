@@ -3,18 +3,24 @@ import { supabase } from './supabaseClient'
 import './App.css'
 
 function App() {
-  const [session, setSession] = useState(null)
-  const [authMode, setAuthMode] = useState(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [message, setMessage] = useState('')
+const [session, setSession] = useState(null)
+const [authMode, setAuthMode] = useState(null)
+const [email, setEmail] = useState('')
+const [password, setPassword] = useState('')
+const [message, setMessage] = useState('')
+const [courses, setCourses] = useState([])
+const [courseCode, setCourseCode] = useState('')
+const [courseName, setCourseName] = useState('')
+const [semester, setSemester] = useState('')
+const [status, setStatus] = useState('Planned')
+const [meetingDay, setMeetingDay] = useState('')
+const [startTime, setStartTime] = useState('')
+const [endTime, setEndTime] = useState('')
 
-  const [courses, setCourses] = useState([])
-  const [courseCode, setCourseCode] = useState('')
-  const [courseName, setCourseName] = useState('')
-  const [semester, setSemester] = useState('')
-  const [status, setStatus] = useState('Planned')
-
+const [overrideCategory, setOverrideCategory] = useState('')
+const [overrideDescription, setOverrideDescription] = useState('')
+const [hasDocumentation, setHasDocumentation] = useState(false)
+const [overrideResult, setOverrideResult] = useState('')
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
@@ -60,13 +66,16 @@ function App() {
     const { error } = await supabase
       .from('course_plan')
       .insert([
-        {
-          user_id: session.user.id,
-          course_code: courseCode,
-          course_name: courseName,
-          semester: semester,
-          status: status,
-        },
+       {
+  user_id: session.user.id,
+  course_code: courseCode,
+  course_name: courseName,
+  semester: semester,
+  status: status,
+  meeting_day: meetingDay || null,
+  start_time: startTime || null,
+  end_time: endTime || null,
+},
       ])
 
     if (error) {
@@ -76,9 +85,13 @@ function App() {
       setCourseName('')
       setSemester('')
       setStatus('Planned')
+      setMeetingDay('')
+      setStartTime('')
+      setEndTime('')
       setMessage('Course added successfully!')
       fetchCourses()
     }
+    
   }
 
   async function handleUpdateCourse(courseId, newStatus) {
@@ -161,7 +174,118 @@ function App() {
     setMessage('')
     setAuthMode(null)
   }
+function getCompatibilityResult() {
+  const completedCourses = courses.filter(
+    (course) => course.status === 'Completed'
+  )
 
+  const plannedCourses = courses.filter(
+    (course) => course.status === 'Planned'
+  )
+
+  if (completedCourses.length === 0) {
+    return 'Add completed courses from previous semesters to create a personalized compatibility estimate.'
+  }
+
+  if (plannedCourses.length === 0) {
+    return 'Add planned courses to evaluate your proposed course load.'
+  }
+
+  const semesterCounts = {}
+
+  completedCourses.forEach((course) => {
+    if (!semesterCounts[course.semester]) {
+      semesterCounts[course.semester] = 0
+    }
+
+    semesterCounts[course.semester] += 1
+  })
+
+  const previousLoads = Object.values(semesterCounts)
+  const highestPreviousLoad = Math.max(...previousLoads)
+
+  if (plannedCourses.length > highestPreviousLoad) {
+    return `Your planned load contains ${plannedCourses.length} courses. Your highest completed semester in SmartAdvisor contains ${highestPreviousLoad}. This course load may benefit from additional review.`
+  }
+
+  return `Your planned load contains ${plannedCourses.length} courses, which is within the range of your previous completed semesters.`
+}
+function getScheduleConflicts() 
+{
+  const scheduledCourses = courses.filter(
+    (course) =>
+      (course.status === 'Planned' || course.status === 'In Progress') &&
+      course.meeting_day &&
+      course.start_time &&
+      course.end_time
+  )
+
+  const conflicts = []
+
+  for (let i = 0; i < scheduledCourses.length; i++) {
+    for (let j = i + 1; j < scheduledCourses.length; j++) {
+      const firstCourse = scheduledCourses[i]
+      const secondCourse = scheduledCourses[j]
+
+      const sameSemester =
+        firstCourse.semester === secondCourse.semester
+
+      const sameDay =
+        firstCourse.meeting_day === secondCourse.meeting_day
+
+      const timesOverlap =
+        firstCourse.start_time < secondCourse.end_time &&
+        secondCourse.start_time < firstCourse.end_time
+
+      if (sameSemester && sameDay && timesOverlap) {
+        conflicts.push(
+          `${firstCourse.course_code} conflicts with ${secondCourse.course_code} on ${firstCourse.meeting_day}.`
+        )
+      }
+    }
+  }
+
+  return conflicts
+}
+function handleOverrideEvaluation(event) {
+  event.preventDefault()
+
+  if (!overrideCategory || !overrideDescription.trim()) {
+    setOverrideResult(
+      'Please select a circumstance and provide a brief description before requesting a recommendation.'
+    )
+    return
+  }
+
+  if (overrideCategory === 'military') {
+    setOverrideResult(
+      hasDocumentation
+        ? 'Recommendation: Submit for advising review. Active-duty military obligations may support an online override request. Include the available supporting documentation. Final decisions are made by advising staff.'
+        : 'Recommendation: Gather supporting documentation and contact advising staff. Active-duty military obligations may support an online override request, but documentation may be required. Final decisions are made by advising staff.'
+    )
+    return
+  }
+
+  if (overrideCategory === 'medical') {
+    setOverrideResult(
+      hasDocumentation
+        ? 'Recommendation: Submit for advising review. A documented hospitalization or illness that prevents in-person attendance may support an online override request. Final decisions are made by advising staff.'
+        : 'Recommendation: Obtain supporting documentation before submitting for review. Medical circumstances may require documentation showing why in-person attendance is not possible. Final decisions are made by advising staff.'
+    )
+    return
+  }
+
+  if (overrideCategory === 'transportation') {
+    setOverrideResult(
+      'Recommendation: Contact advising staff for additional review. Transportation circumstances may require individual consideration and possible escalation. Supporting information should be provided when available. Final decisions are made by advising staff.'
+    )
+    return
+  }
+
+  setOverrideResult(
+    'Recommendation: Contact advising staff to discuss your circumstances. The information entered does not clearly match one of the circumstances represented in this prototype. Final decisions are made by advising staff.'
+  )
+}
   if (session) {
     return (
       <div className="app">
@@ -209,7 +333,35 @@ function App() {
                 onChange={(event) => setCourseName(event.target.value)}
                 required
               />
+<label htmlFor="meetingDay">Meeting Day</label>
+<select
+  id="meetingDay"
+  value={meetingDay}
+  onChange={(event) => setMeetingDay(event.target.value)}
+>
+  <option value="">No meeting day</option>
+  <option value="Monday">Monday</option>
+  <option value="Tuesday">Tuesday</option>
+  <option value="Wednesday">Wednesday</option>
+  <option value="Thursday">Thursday</option>
+  <option value="Friday">Friday</option>
+</select>
 
+<label htmlFor="startTime">Start Time</label>
+<input
+  id="startTime"
+  type="time"
+  value={startTime}
+  onChange={(event) => setStartTime(event.target.value)}
+/>
+
+<label htmlFor="endTime">End Time</label>
+<input
+  id="endTime"
+  type="time"
+  value={endTime}
+  onChange={(event) => setEndTime(event.target.value)}
+/>
               <label htmlFor="semester">Semester</label>
               <input
                 id="semester"
@@ -280,33 +432,114 @@ function App() {
             </div>
           </section>
 
+         <section className="features">
+  <h2>Course Compatibility</h2>
+
+  <p>
+    SmartAdvisor compares your planned course load with your previous
+    completed semesters to provide a personalized preliminary assessment.
+  </p>
+
+  <div className="compatibility-result">
+    <h3>Compatibility Result</h3>
+    <p>{getCompatibilityResult()}</p>
+  </div>
+
+  <p>
+    <small>
+      This result is a prototype planning estimate and is not a substitute
+      for academic advising.
+    </small>
+  </p>
+</section>
+
           <section className="features">
-            <h2>Course Compatibility</h2>
+  <h2>Scheduling Conflict Resolver</h2>
 
-            <p>
-              SmartAdvisor can consider your previous semesters when evaluating
-              whether a proposed course load may need additional review.
-            </p>
-          </section>
+  <p>
+    SmartAdvisor checks planned and in-progress courses in the same
+    semester for overlapping meeting times.
+  </p>
+
+  <div className="conflict-result">
+    <h3>Schedule Check</h3>
+
+    {getScheduleConflicts().length === 0 ? (
+      <p>No scheduling conflicts detected.</p>
+    ) : (
+      <ul>
+        {getScheduleConflicts().map((conflict, index) => (
+          <li key={index}>{conflict}</li>
+        ))}
+      </ul>
+    )}
+  </div>
+</section>
 
           <section className="features">
-            <h2>Scheduling Conflict Resolver</h2>
+  <h2>Online Override Recommendation</h2>
 
-            <p>
-              Check planned courses for scheduling conflicts and identify
-              possible alternatives.
-            </p>
-          </section>
+  <p>
+    Describe the circumstances affecting your ability to attend an
+    in-person course. SmartAdvisor will provide a preliminary recommendation
+    about whether the situation should be submitted for advising review.
+  </p>
 
-          <section className="features">
-            <h2>Online Override Evaluation</h2>
+  <form onSubmit={handleOverrideEvaluation} className="auth-form">
+    <label htmlFor="overrideCategory">Circumstance</label>
+    <select
+      id="overrideCategory"
+      value={overrideCategory}
+      onChange={(event) => setOverrideCategory(event.target.value)}
+      required
+    >
+      <option value="">Select a circumstance</option>
+      <option value="military">Active-Duty Military Obligation</option>
+      <option value="medical">Hospitalization or Illness</option>
+      <option value="transportation">
+        Exceptional Transportation Circumstances
+      </option>
+      <option value="other">Other Circumstances</option>
+    </select>
 
-            <p>
-              Review online override criteria and receive a preliminary result.
-              Final override decisions are made by the appropriate university
-              personnel.
-            </p>
-          </section>
+    <label htmlFor="overrideDescription">
+      Brief Description of Circumstances
+    </label>
+    <textarea
+      id="overrideDescription"
+      value={overrideDescription}
+      onChange={(event) => setOverrideDescription(event.target.value)}
+      placeholder="Briefly explain why attending an in-person course may not be possible."
+      rows="4"
+      required
+    />
+
+    <label>
+      <input
+        type="checkbox"
+        checked={hasDocumentation}
+        onChange={(event) => setHasDocumentation(event.target.checked)}
+      />
+      Supporting documentation is available
+    </label>
+
+    <button type="submit">Get Recommendation</button>
+  </form>
+
+  {overrideResult && (
+    <div className="override-result">
+      <h3>SmartAdvisor Recommendation</h3>
+      <p>{overrideResult}</p>
+    </div>
+  )}
+
+  <p>
+    <small>
+      SmartAdvisor provides a planning recommendation only. Online override
+      requests are reviewed and decided by advising staff.
+    </small>
+  </p>
+</section>
         </main>
       </div>
     )
