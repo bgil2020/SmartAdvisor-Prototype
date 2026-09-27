@@ -136,7 +136,7 @@ The production files are generated in the `dist` directory.
 
 Unlisted YouTube demonstration:
 https://youtu.be/nlidHwzbaus
-## Best viwed in 1080p HD quality
+## Best viewed in 1080p HD quality
 
 **Video link **
 
